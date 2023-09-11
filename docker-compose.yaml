@@ -1,0 +1,50 @@
+version: "3"
+
+services:
+  db:
+    image: postgres:15.3-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: my_db_name
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+  hydra-migrate:
+    image: oryd/hydra:v2.2.0
+    command: migrate sql -e --yes
+    environment:
+      SECRETS_SYSTEM: secrets-system-dev
+      DSN: postgres://user:password@db:5432/baaraaccounts?sslmode=disable&max_conns=20&max_idle_conns=4
+    restart: on-failure
+    depends_on:
+      - db
+  hydra:
+    image: oryd/hydra:v2.2.0
+    environment:
+      LOG_LEAK_SENSITIVE_VALUES: "true"
+      URLS_SELF_ISSUER: http://127.0.0.1:4444
+      URLS_SELF_PUBLIC: http://127.0.0.1:4444
+      URLS_CONSENT: http://127.0.0.1:3000/consent
+      URLS_LOGIN: http://127.0.0.1:3000/login
+      URLS_LOGOUT: http://127.0.0.1:3000/logout
+      URLS_ERROR: http://127.0.0.1:3000/error
+      URLS_POST_LOGOUT_REDIRECT: http://127.0.0.1:3000/logouts
+      SECRETS_SYSTEM: ${HYDRA_SECRETS_SYSTEM:-secrets-system-dev}
+      OIDC_SUBJECT_IDENTIFIERS_SUPPORTED_TYPES: public,pairwise
+      OIDC_SUBJECT_IDENTIFIERS_PAIRWISE_SALT: oidc-salt-dev
+      SERVE_PUBLIC_CORS_ENABLED: true
+      SERVE_PUBLIC_CORS_ALLOWED_METHODS: POST,GET,PUT,DELETE
+      SERVE_ADMIN_CORS_ENABLED: true
+      SERVE_ADMIN_CORS_ALLOWED_METHODS: POST,GET,PUT,DELETE
+      SERVE_COOKIES_SAME_SITE_MODE: Lax
+      LOG_LEVEL: debug
+      DSN: postgres://user:password@db:5432/baaraaccounts?sslmode=disable&max_conns=20&max_idle_conns=4
+    ports:
+      - "4444:4444" # Public port
+      - "4445:4445" # Admin port
+      - "5555:5555" # Port for hydra token user
+    command: serve all --dev
+    restart: unless-stopped
+    depends_on:
+      - hydra-migrate

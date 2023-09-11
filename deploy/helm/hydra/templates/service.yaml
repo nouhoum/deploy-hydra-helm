@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-public
+  labels:
+    app: {{ .Chart.Name }}
+  {{- with .Values.service.public.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}  
+spec:
+  type: {{ .Values.service.public.type }}
+  ports:
+    - port: {{ .Values.service.public.port }}
+      targetPort: http-public
+      protocol: TCP
+      name: {{ .Values.service.public.name }}
+  selector:
+    app: {{ .Chart.Name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-admin
+  labels:
+    app: {{ .Chart.Name }}
+  {{- with .Values.service.admin.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}  
+spec:
+  type: {{ .Values.service.admin.type }}
+  ports:
+    - port: {{ .Values.service.admin.port }}
+      targetPort: http-admin
+      protocol: TCP
+      name: {{ .Values.service.admin.name }}
+  selector:
+    app: {{ .Chart.Name }}
+  
